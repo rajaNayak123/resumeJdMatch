@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resume JD Matcher</title>
+    <style>
+      body {
+        width: 400px;
+        min-height: 500px;
+        margin: 0;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #2d3748;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .header p {
+        margin: 8px 0 0 0;
+        font-size: 14px;
+        color: #718096;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #e2e8f0;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #edf2f7;
+        transform: translateY(-1px);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .status {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        display: none;
+      }
+
+      .status.info {
+        background: #ebf8ff;
+        color: #2b6cb0;
+        border: 1px solid #bee3f8;
+      }
+
+      .status.success {
+        background: #f0fff4;
+        color: #2f855a;
+        border: 1px solid #c6f6d5;
+      }
+
+      .status.error {
+        background: #fed7d7;
+        color: #c53030;
+        border: 1px solid #feb2b2;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 12px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .data-section {
+        display: none;
+        margin-top: 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f8fafc;
+        padding: 15px;
+      }
+
+      .data-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #007bff;
+      }
+
+      .data-header h3 {
+        margin: 0;
+        color: #007bff;
+        font-size: 16px;
+      }
+
+      .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .btn-small:hover {
+        background: #218838;
+      }
+
+      .extracted-data {
+        max-height: 500px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #333;
+      }
+
+      .section {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .section h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #2d3748;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 8px;
+      }
+
+      .info-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .info-grid div {
+        padding: 8px;
+        background: #f7fafc;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+
+      .experience-item,
+      .education-item,
+      .project-item {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f7fafc;
+        border-radius: 6px;
+        border-left: 4px solid #667eea;
+      }
+
+      .experience-header,
+      .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .duration {
+        font-size: 12px;
+        color: #718096;
+        background: #edf2f7;
+        padding: 2px 8px;
+        border-radius: 12px;
+      }
+
+      .company,
+      .institution {
+        font-weight: 500;
+        color: #4a5568;
+        margin-bottom: 4px;
+      }
+
+      .location {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 4px;
+      }
+
+      .description {
+        font-size: 13px;
+        line-height: 1.4;
+        color: #4a5568;
+        margin-top: 8px;
+      }
+
+      .skills-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .skill-tag {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .summary {
+        background: linear-gradient(135deg, #f7fafc, #edf2f7);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .summary-grid div {
+        font-size: 12px;
+        padding: 4px 8px;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .timestamp {
+        text-align: center;
+        font-size: 11px;
+        color: #718096;
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin-bottom: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .profile-content p {
+        font-size: 13px;
+        line-height: 1.5;
+        color: #4a5568;
+        margin: 0;
+      }
+
+      .role,
+      .tech-stack {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 4px;
+      }
+
+      .year {
+        font-size: 12px;
+        color: #718096;
+        font-style: italic;
+      }
+
+      /* Scrollbar styling */
+      .data-section::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .data-section::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      .data-section::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+      }
+
+      .data-section::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Resume JD Matcher</h1>
+        <p>Extract and match resume data from Naukri profiles</p>
+      </div>
+
+      <div class="button-group">
+        <button id="extractBtn" class="btn btn-primary">
+          📄 Extract Resume
+        </button>
+        <button id="matchBtn" class="btn btn-secondary">🎯 Match JD</button>
+      </div>
+      
+      <div class="section" id="openingsSection" style="padding: 0; background: none; box-shadow: none; margin-bottom: 16px;">
+          <select id="openingsDropdown" class="btn" style="width: 100%; text-align: left; background: #f7fafc; color: #4a5568; border: 1px solid #e2e8f0;">
+            <option value="">Loading Job Descriptions...</option>
+          </select>
+      </div>
+      <div id="status" class="status">Ready to extract resume data</div>
+
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>Extracting resume data...</div>
+      </div>
+
+      <div id="dataSection" class="data-section">
+        <div class="data-header">
+          <h3>📋 Extracted Resume Data (JSON Format)</h3>
+          <button id="copyJsonBtn" class="btn btn-small">📋 Copy JSON</button>
+        </div>
+        <div id="extractedData" class="extracted-data">
+          </div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

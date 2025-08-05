@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Resume JD Matcher",
+  "version": "1.0.0",
+  "description": "Extract resume data from Naukri profiles and match with job descriptions",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://*.naukri.com/*",
+    "https://xpo-ats.onrender.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*.naukri.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Resume JD Matcher"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
