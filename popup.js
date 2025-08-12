@@ -453,6 +453,15 @@ class PopupManager {
   }
 
   async matchWithJD() {
+    // --- START: ADDED URL CHECK ---
+    // This check ensures the function only runs on the correct website.
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab.url || !tab.url.includes("resdex.naukri.com")) {
+      this.showError("You must be on a Naukri ResDex page to run a match.");
+      return; // Stop the function here if not on the correct page
+    }
+    // --- END: ADDED URL CHECK ---
+
     // START: Disable buttons to prevent throttling
     this.matchBtn.disabled = true;
     // END: Disable buttons
@@ -465,7 +474,6 @@ class PopupManager {
       const openingId = this.openingsDropdown.value;
       if (!openingId) {
         this.showError("Please select a job description first.");
-        console.error("❌ No opening ID selected.");
         return; // Return here because finally block will still run
       }
       console.log("✅ Opening ID selected:", openingId);
@@ -477,7 +485,6 @@ class PopupManager {
       const resumeData = storageResult.extractedResumeData;
       if (!resumeData) {
         this.showError("Please extract resume data first.");
-        console.error("❌ No resume data found in storage.");
         return; // Return here because finally block will still run
       }
       console.log("✅ Found resume data in storage.");
