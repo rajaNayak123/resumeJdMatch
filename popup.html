@@ -48,12 +48,15 @@
 
       .button-group {
         display: flex;
+        flex-direction: column;
         gap: 12px;
         margin-bottom: 20px;
+        align-items: center;
       }
 
       .btn {
-        flex: 1;
+        flex: 0 1 auto;
+        min-width: 120px;
         padding: 12px 16px;
         border: none;
         border-radius: 8px;
@@ -64,6 +67,10 @@
         text-align: center;
         text-decoration: none;
         display: inline-block;
+      }
+
+      .btn-full-width {
+        width: 100%;
       }
 
       .btn-primary {
@@ -370,29 +377,27 @@
     <div class="container">
       <div class="header">
         <h1>Resume JD Matcher</h1>
-        <p>Extract and match resume data from Naukri profiles</p>
+        <p>Automatically extract and match resume data with job descriptions</p>
       </div>
 
-      <div class="button-group">
-        <button id="extractBtn" class="btn btn-primary">
-          📄 Extract Resume
-        </button>
-        <button id="matchBtn" class="btn btn-secondary">🎯 Match JD</button>
-      </div>
-      
       <div class="section" id="openingsSection" style="padding: 0; background: none; box-shadow: none; margin-bottom: 16px;">
           <select id="openingsDropdown" class="btn" style="width: 100%; text-align: left; background: #f7fafc; color: #4a5568; border: 1px solid #e2e8f0;">
             <option value="">Loading Job Descriptions...</option>
           </select>
+          <button id="retryBtn" class="btn btn-small" style="margin-top: 8px; width: 100%; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 12px; display: none;">🔄 Retry Loading JDs</button>
       </div>
-      <div id="status" class="status">Ready to extract resume data</div>
+      
+      <div class="button-group">
+        <button id="matchBtn" class="btn btn-secondary btn-full-width">🎯 Match JD</button>
+      </div>
+      <div id="status" class="status">Ready to match resume with job description</div>
 
       <div id="loading" class="loading">
         <div class="spinner"></div>
         <div>Extracting resume data...</div>
       </div>
 
-      <div id="dataSection" class="data-section">
+      <div id="dataSection" class="data-section" style="display: none;">
         <div class="data-header">
           <h3>📋 Extracted Resume Data (JSON Format)</h3>
           <button id="copyJsonBtn" class="btn btn-small">📋 Copy JSON</button>

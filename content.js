@@ -2151,6 +2151,11 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
           .extractResumeData()
           .then((data) => {
             if (data) {
+              // --- LOGGING ADDED HERE ---
+              console.log("--- FINAL EXTRACTED RESUME DATA ---");
+              console.log(JSON.stringify(data, null, 2));
+              // --- END OF ADDED LOGGING ---
+
               console.log("✅ Sending extracted data to popup");
               sendResponse({ success: true, data: data });
             } else {

@@ -2,9 +2,9 @@
 class PopupManager {
   constructor() {
     try {
-      this.extractBtn = document.getElementById("extractBtn");
       this.matchBtn = document.getElementById("matchBtn");
       this.openingsDropdown = document.getElementById("openingsDropdown");
+      this.retryBtn = document.getElementById("retryBtn");
       this.status = document.getElementById("status");
       this.loading = document.getElementById("loading");
       this.dataSection = document.getElementById("dataSection");
@@ -12,7 +12,6 @@ class PopupManager {
 
       console.log("🔧 PopupManager initialized");
       console.log("📋 Elements found:", {
-        extractBtn: !!this.extractBtn,
         matchBtn: !!this.matchBtn,
         openingsDropdown: !!this.openingsDropdown,
         status: !!this.status,
@@ -22,9 +21,6 @@ class PopupManager {
       });
 
       // Check if all required elements are found
-      if (!this.extractBtn) {
-        console.error("❌ Extract button not found");
-      }
       if (!this.matchBtn) {
         console.error("❌ Match button not found");
       }
@@ -42,7 +38,6 @@ class PopupManager {
       window.popupManager = this;
 
       // Bind methods immediately to ensure they're available
-      this.extractResumeData = this.extractResumeData.bind(this);
       this.fetchAndPopulateOpenings = this.fetchAndPopulateOpenings.bind(this);
       this.showLoading = this.showLoading.bind(this);
       this.showError = this.showError.bind(this);
@@ -59,56 +54,41 @@ class PopupManager {
   }
 
   init() {
+    console.log("🚀 Initializing PopupManager...");
+    
     // Check if we have the minimum required elements
-    if (!this.extractBtn || !this.status) {
+    if (!this.status) {
       console.error("❌ Critical elements missing, cannot initialize popup");
       return;
     }
 
+    console.log("✅ Required elements found, proceeding with initialization");
+
     // Methods are already bound in constructor
 
+    console.log("🔧 Setting up event listeners...");
     this.setupEventListeners();
+    
+    console.log("🔍 Checking current tab...");
     this.checkCurrentTab();
+    
+    console.log("📋 Fetching and populating job openings...");
     this.fetchAndPopulateOpenings();
+    
+    console.log("🔄 Auto-extracting resume data...");
+    // Auto-extract resume data when popup opens
+    this.autoExtractResumeData();
+    
+    console.log("✅ PopupManager initialization completed");
   }
 
   setupEventListeners() {
-    if (!this.extractBtn) {
-      console.error("❌ Extract button not found, cannot add event listener");
-      return;
-    }
     if (!this.matchBtn) {
       console.error("❌ Match button not found, cannot add event listener");
       return;
     }
 
     // Global reference is already set in constructor
-
-    this.extractBtn.addEventListener("click", function () {
-      console.log("🔘 Extract button clicked");
-      console.log("🔍 window.popupManager:", window.popupManager);
-      console.log("🔍 typeof window.popupManager:", typeof window.popupManager);
-      if (window.popupManager) {
-        console.log(
-          "🔍 window.popupManager.extractResumeData:",
-          typeof window.popupManager.extractResumeData
-        );
-      }
-
-      if (
-        window.popupManager &&
-        typeof window.popupManager.extractResumeData === "function"
-      ) {
-        window.popupManager.extractResumeData();
-      } else {
-        console.error("❌ PopupManager instance or method not available");
-        console.error("🔍 window.popupManager:", window.popupManager);
-        console.error(
-          "🔍 typeof window.popupManager.extractResumeData:",
-          typeof window.popupManager.extractResumeData
-        );
-      }
-    });
 
     this.matchBtn.addEventListener("click", function () {
       console.log("🔘 Match button clicked");
@@ -121,6 +101,15 @@ class PopupManager {
         console.error("❌ PopupManager instance or method not available");
       }
     });
+
+    // Add retry button event listener
+    if (this.retryBtn) {
+      this.retryBtn.addEventListener("click", () => {
+        console.log("🔄 Retry button clicked");
+        this.updateStatus("Retrying to fetch job descriptions...", "info");
+        this.fetchAndPopulateOpenings();
+      });
+    }
   }
 
   async checkCurrentTab() {
@@ -138,19 +127,10 @@ class PopupManager {
         (tab.url.includes("naukri.com") ||
           tab.url.includes("resdex.naukri.com"))
       ) {
-        this.updateStatus(
-          "Ready to extract resume data from Naukri/ResDex",
-          "info"
-        );
-        if (this.extractBtn) {
-          this.extractBtn.disabled = false;
-        }
+        this.updateStatus("Ready to match resume with job description", "info");
         console.log("✅ Tab is valid for extraction");
       } else {
         this.updateStatus("Please navigate to a Naukri profile page", "error");
-        if (this.extractBtn) {
-          this.extractBtn.disabled = true;
-        }
         console.log("❌ Tab is not valid for extraction");
       }
     } catch (error) {
@@ -161,7 +141,6 @@ class PopupManager {
 
   async extractResumeData() {
     // START: Disable buttons during processing
-    this.extractBtn.disabled = true;
     this.matchBtn.disabled = true;
     // END: Disable buttons during processing
 
@@ -238,41 +217,88 @@ class PopupManager {
       this.showError("Error extracting resume data: " + error.message);
     } finally {
       // START: Re-enable buttons after processing
-      this.extractBtn.disabled = false;
       this.matchBtn.disabled = false;
       // END: Re-enable buttons after processing
     }
   }
 
+  async autoExtractResumeData() {
+    try {
+      console.log("🚀 Auto-extracting resume data...");
+
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      if (!tab || !tab.id) {
+        console.log("❌ No active tab found for auto-extraction");
+        return;
+      }
+
+      if (!tab.url || !tab.url.includes("resdex.naukri.com")) {
+        console.log("❌ Not on a supported page, skipping auto-extraction");
+        return;
+      }
+
+      console.log("✅ Valid Naukri ResDex page detected, starting auto-extraction");
+
+      let response;
+      try {
+        // First attempt to send the message
+        response = await chrome.tabs.sendMessage(tab.id, {
+          action: "extractResume",
+        });
+      } catch (error) {
+        // If content script isn't there, inject it and retry.
+        if (error.message.includes("Receiving end does not exist")) {
+          console.log("⚠️ Content script not ready, attempting to inject...");
+
+          // Inject the content script
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["content.js"],
+          });
+
+          // Wait a moment for the script to load and initialize its listener
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Retry sending the message
+          console.log("🔄 Retrying message to content script...");
+          response = await chrome.tabs.sendMessage(tab.id, {
+            action: "extractResume",
+          });
+        } else {
+          // For other errors, re-throw them to be caught by the outer block
+          throw error;
+        }
+      }
+
+      // Process the response from either the first or second attempt
+      if (response && response.success) {
+        console.log("✅ Auto-extraction successful");
+        chrome.storage.local.set({ extractedResumeData: response.data });
+        this.updateStatus("Resume data extracted automatically", "success");
+      } else {
+        console.log("❌ Auto-extraction failed:", response?.error || "No data returned.");
+      }
+    } catch (error) {
+      // The outer catch handles failures from injection or the second message attempt
+      console.error("❌ Error in auto-extraction process:", error);
+      // Fail silently for the user, as per the original design.
+    }
+  }
+
   displayExtractedData(data) {
-    console.log("🎨 Displaying extracted data in JSON format:", data);
+    console.log("🎨 Data extracted successfully (hidden from user)");
 
-    // Check if required elements exist
-    if (!this.dataSection) {
-      console.error("❌ Data section element not found");
-      return;
-    }
-    if (!this.extractedData) {
-      console.error("❌ Extracted data element not found");
-      return;
-    }
-
-    this.dataSection.style.display = "block";
-    console.log("🎨 Set data section display to block");
-
-    // Display the complete JSON data
-    const jsonData = data.modernData || data;
-    const formattedJson = JSON.stringify(jsonData, null, 2);
-
-    this.extractedData.textContent = formattedJson;
-    console.log("🎨 Displayed JSON data");
-
-    // Setup copy functionality
-    this.setupCopyButton(formattedJson);
-
-    console.log("✅ JSON data display completed");
+    // Store the data without displaying it
     chrome.storage.local.set({ extractedResumeData: data });
-    this.showSuccess("Resume data extracted successfully!");
+
+    // Update status to show extraction was successful
+    this.updateStatus("Resume data extracted successfully", "success");
+
+    console.log("✅ Data stored and ready for matching");
   }
 
   // Setup copy button functionality
@@ -429,27 +455,28 @@ class PopupManager {
   async matchWithJD() {
     // START: Disable buttons to prevent throttling
     this.matchBtn.disabled = true;
-    this.extractBtn.disabled = true;
     // END: Disable buttons
 
-    this.updateStatus('Generating screening report...', 'info');
+    this.updateStatus("Generating screening report...", "info");
     console.log("🎯 Match JD button clicked, starting POST request process...");
 
     try {
       // 1. Get Opening ID from dropdown
       const openingId = this.openingsDropdown.value;
       if (!openingId) {
-        this.showError('Please select a job description first.');
+        this.showError("Please select a job description first.");
         console.error("❌ No opening ID selected.");
         return; // Return here because finally block will still run
       }
       console.log("✅ Opening ID selected:", openingId);
 
       // 2. Get CV Text from local storage
-      const storageResult = await chrome.storage.local.get(['extractedResumeData']);
+      const storageResult = await chrome.storage.local.get([
+        "extractedResumeData",
+      ]);
       const resumeData = storageResult.extractedResumeData;
       if (!resumeData) {
-        this.showError('Please extract resume data first.');
+        this.showError("Please extract resume data first.");
         console.error("❌ No resume data found in storage.");
         return; // Return here because finally block will still run
       }
@@ -459,16 +486,17 @@ class PopupManager {
       // 3. Prepare the request body
       const requestBody = {
         opening_id: openingId, // Changed key to 'opening_id' to match the server's expectation.
-        cvtext: resumeData
+        cvtext: resumeData,
       };
       // END: Corrected request body
 
       // 4. Define fetch options for the POST request
-      const apiEndpoint = 'https://xpo-ats.onrender.com/api/extension/generateScreeningReport';
+      const apiEndpoint =
+        "https://xpo-ats.onrender.com/api/extension/generateScreeningReport";
       const fetchOptions = {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       };
@@ -479,8 +507,14 @@ class PopupManager {
       const response = await fetch(apiEndpoint, fetchOptions);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Could not parse error response.' }));
-        throw new Error(`API Error: ${response.status} - ${errorData.message || response.statusText}`);
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Could not parse error response." }));
+        throw new Error(
+          `API Error: ${response.status} - ${
+            errorData.message || response.statusText
+          }`
+        );
       }
 
       const reportData = await response.json();
@@ -489,9 +523,9 @@ class PopupManager {
       // 6. Handle the response
       if (reportData && reportData.webViewLink) {
         chrome.tabs.create({ url: reportData.webViewLink });
-        this.showSuccess('Screening report opened in a new tab!');
+        this.showSuccess("Screening report opened in a new tab!");
       } else {
-        throw new Error('API response did not include a webViewLink.');
+        throw new Error("API response did not include a webViewLink.");
       }
     } catch (error) {
       console.error("❌ Failed to generate screening report:", error);
@@ -500,69 +534,133 @@ class PopupManager {
       // START: Re-enable buttons in the finally block
       // This ensures they are always re-enabled, even if an error occurs.
       this.matchBtn.disabled = false;
-      this.extractBtn.disabled = false;
       // END: Re-enable buttons
     }
   }
 
   async fetchAndPopulateOpenings() {
     console.log("🔍 Fetching job openings...");
+    
+    // Check if dropdown element exists
+    if (!this.openingsDropdown) {
+      console.error("❌ Openings dropdown element not found");
+      return;
+    }
+    
     try {
-      const response = await fetch('https://xpo-ats.onrender.com/api/extension/fetchOpenings');
+            console.log("🌐 Making API request to fetch openings...");
+      
+      const response = await fetch(
+        "https://xpo-ats.onrender.com/api/extension/fetchOpenings",
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // Add timeout
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }
+      );
+      
+      console.log("📡 API response status:", response.status);
+      
       if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}`);
       }
+      
       const openings = await response.json();
-      this.openingsDropdown.innerHTML = ''; // Clear "Loading..." message
+      console.log("📋 Received openings data:", openings);
+      
+      // Clear the dropdown
+      this.openingsDropdown.innerHTML = "";
+      console.log("🧹 Cleared dropdown content");
 
       // Add a default, non-selectable option
       const defaultOption = document.createElement("option");
       defaultOption.value = "";
       defaultOption.textContent = "Select a Job Description";
       this.openingsDropdown.appendChild(defaultOption);
+      console.log("➕ Added default option");
 
       // Populate dropdown with openings from the API
-      openings.forEach(opening => {
-        const option = document.createElement('option');
-        option.value = opening.openingId; // Use the openingId field for the value
-        option.textContent = opening.title.trim(); // Display the title
-        this.openingsDropdown.appendChild(option);
-      });
-
+      if (openings && Array.isArray(openings)) {
+        openings.forEach((opening, index) => {
+          const option = document.createElement("option");
+          option.value = opening.openingId || opening.id || index; // Fallback for different field names
+          option.textContent = opening.title || opening.jobTitle || opening.name || `Job ${index + 1}`; // Fallback for different field names
+          this.openingsDropdown.appendChild(option);
+          console.log(`➕ Added option: ${option.textContent} (${option.value})`);
+        });
+        console.log(`✅ Successfully populated ${openings.length} job openings`);
+      } else {
+        console.warn("⚠️ Openings data is not an array:", openings);
+        this.openingsDropdown.innerHTML = `<option value="">No job openings available</option>`;
+      }
+      
+      // Hide retry button on success
+      if (this.retryBtn) {
+        this.retryBtn.style.display = "none";
+      }
     } catch (error) {
       console.error("❌ Failed to fetch openings:", error);
-      this.openingsDropdown.innerHTML = `<option value="">Failed to load JDs</option>`;
-      this.updateStatus("Could not fetch job openings.", "error");
+      
+      // Show more detailed error information
+      if (error.name === 'AbortError') {
+        console.error("⏰ Request timed out after 10 seconds");
+        this.openingsDropdown.innerHTML = `<option value="">Request timed out</option>`;
+        this.updateStatus("API request timed out. Please try again.", "error");
+      } else if (error.message.includes('Failed to fetch')) {
+        console.error("🌐 Network error - API might be down");
+        this.openingsDropdown.innerHTML = `<option value="">API unavailable</option>`;
+        this.updateStatus("API is currently unavailable. Please try again later.", "error");
+      } else {
+        console.error("❌ Other error:", error.message);
+        this.openingsDropdown.innerHTML = `<option value="">Failed to load JDs</option>`;
+        this.updateStatus("Could not fetch job openings.", "error");
+      }
+      
+      // Show retry button when there's an error
+      if (this.retryBtn) {
+        this.retryBtn.style.display = "block";
+      }
+      
+      // Add a retry button or option
+      console.log("🔄 You can try refreshing the popup to retry");
     }
   }
-}
+} 
 
 // Initialize popup when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🚀 Popup DOM loaded, initializing PopupManager");
 
-  // Double-check that all required elements exist
-  const requiredElements = [
-    "extractBtn",
-    "matchBtn",
-    "status",
-    "dataSection",
-    "extractedData",
-    "openingsDropdown"
-  ];
-  const missingElements = requiredElements.filter(function (id) {
-    return !document.getElementById(id);
-  });
+  // Add a small delay to ensure DOM is fully ready
+  setTimeout(() => {
+    // Double-check that all required elements exist
+    const requiredElements = [
+      "matchBtn",
+      "status",
+      "dataSection",
+      "extractedData",
+      "openingsDropdown",
+    ];
+    const missingElements = requiredElements.filter(function (id) {
+      return !document.getElementById(id);
+    });
 
-  if (missingElements.length > 0) {
-    console.error("❌ Missing required elements:", missingElements);
-    return;
-  }
+    if (missingElements.length > 0) {
+      console.error("❌ Missing required elements:", missingElements);
+      console.error("🔍 Available elements:", Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+      return;
+    }
 
-  try {
-    const popupManager = new PopupManager();
-    console.log("✅ PopupManager created successfully:", popupManager);
-  } catch (error) {
-    console.error("❌ Failed to create PopupManager:", error);
-  }
+    console.log("✅ All required elements found, creating PopupManager");
+
+    try {
+      const popupManager = new PopupManager();
+      console.log("✅ PopupManager created successfully:", popupManager);
+    } catch (error) {
+      console.error("❌ Failed to create PopupManager:", error);
+    }
+  }, 100); // 100ms delay
 });
