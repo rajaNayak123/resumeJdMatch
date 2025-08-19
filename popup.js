@@ -454,29 +454,25 @@ class PopupManager {
 
   async matchWithJD() {
     // --- START: ADDED URL CHECK ---
-    // This check ensures the function only runs on the correct website.
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab.url || !tab.url.includes("resdex.naukri.com")) {
       this.showError("You must be on a Naukri ResDex page to run a match.");
-      return; // Stop the function here if not on the correct page
+      return;
     }
     // --- END: ADDED URL CHECK ---
 
-    // START: Disable buttons to prevent throttling
     this.matchBtn.disabled = true;
-    // END: Disable buttons
-
     this.updateStatus("Generating screening report...", "info");
     console.log("🎯 Match JD button clicked, starting POST request process...");
 
     try {
       // 1. Get Opening ID from dropdown
-      const openingId = this.openingsDropdown.value;
-      if (!openingId) {
+      const opening_id = this.openingsDropdown.value;
+      if (!opening_id) {
         this.showError("Please select a job description first.");
-        return; // Return here because finally block will still run
+        return;
       }
-      console.log("✅ Opening ID selected:", openingId);
+      console.log("✅ Opening ID selected:", opening_id);
 
       // 2. Get CV Text from local storage
       const storageResult = await chrome.storage.local.get([
@@ -485,17 +481,24 @@ class PopupManager {
       const resumeData = storageResult.extractedResumeData;
       if (!resumeData) {
         this.showError("Please extract resume data first.");
-        return; // Return here because finally block will still run
+        return;
       }
+      
+      // --- FIX: Add a check for the modernData property to ensure data integrity ---
+      if (!resumeData.modernData) {
+        this.showError("Extracted data is invalid. Please try opening the resume again.");
+        console.error("Missing 'modernData' in the stored resume object:", resumeData);
+        return;
+      }
+
       console.log("✅ Found resume data in storage.");
 
-      // START: Corrected request body to match Postman
-      // 3. Prepare the request body
       const requestBody = {
-        opening_id: openingId, // Changed key to 'opening_id' to match the server's expectation.
-        cvtext: resumeData,
+        opening_id: opening_id,
+        resumeData: resumeData.modernData,
       };
-      // END: Corrected request body
+      
+      console.log("DEBUG: Request Body Sent to API:", requestBody);
 
       // 4. Define fetch options for the POST request
       const apiEndpoint =
@@ -514,15 +517,22 @@ class PopupManager {
       const response = await fetch(apiEndpoint, fetchOptions);
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Could not parse error response." }));
-        throw new Error(
-          `API Error: ${response.status} - ${
-            errorData.message || response.statusText
-          }`
-        );
+        let errorBody;
+        try {
+            // Try to parse the error response as JSON
+            errorBody = await response.json();
+            // --- FIX: Log the object correctly for detailed debugging ---
+            console.error("Server Error Response Body (JSON):", JSON.stringify(errorBody, null, 2));
+        } catch (e) {
+            // If it's not JSON, get it as plain text
+            errorBody = await response.text();
+            console.error("Server Error Response (Text):", errorBody);
+        }
+        // Use the detailed message from the body if available
+        const errorMessage = errorBody?.message || (typeof errorBody === 'string' ? errorBody : response.statusText);
+        throw new Error(`API Error: ${response.status} - ${errorMessage}`);
       }
+      // ---
 
       const reportData = await response.json();
       console.log("✅ Report data received:", reportData);
@@ -538,24 +548,20 @@ class PopupManager {
       console.error("❌ Failed to generate screening report:", error);
       this.showError(`Error: ${error.message}`);
     } finally {
-      // START: Re-enable buttons in the finally block
-      // This ensures they are always re-enabled, even if an error occurs.
       this.matchBtn.disabled = false;
-      // END: Re-enable buttons
     }
   }
 
   async fetchAndPopulateOpenings() {
     console.log("🔍 Fetching job openings...");
     
-    // Check if dropdown element exists
     if (!this.openingsDropdown) {
       console.error("❌ Openings dropdown element not found");
       return;
     }
     
     try {
-            console.log("🌐 Making API request to fetch openings...");
+      console.log("🌐 Making API request to fetch openings...");
       
       const response = await fetch(
         "https://xpo-ats.onrender.com/api/extension/fetchOpenings",
@@ -564,7 +570,6 @@ class PopupManager {
           headers: {
             'Content-Type': 'application/json',
           },
-          // Add timeout
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }
       );
@@ -578,23 +583,20 @@ class PopupManager {
       const openings = await response.json();
       console.log("📋 Received openings data:", openings);
       
-      // Clear the dropdown
       this.openingsDropdown.innerHTML = "";
       console.log("🧹 Cleared dropdown content");
 
-      // Add a default, non-selectable option
       const defaultOption = document.createElement("option");
       defaultOption.value = "";
       defaultOption.textContent = "Select a Job Description";
       this.openingsDropdown.appendChild(defaultOption);
       console.log("➕ Added default option");
 
-      // Populate dropdown with openings from the API
       if (openings && Array.isArray(openings)) {
         openings.forEach((opening, index) => {
           const option = document.createElement("option");
-          option.value = opening.openingId || opening.id || index; // Fallback for different field names
-          option.textContent = opening.title || opening.jobTitle || opening.name || `Job ${index + 1}`; // Fallback for different field names
+          option.value = opening.openingId || opening.id || index;
+          option.textContent = opening.title || opening.jobTitle || opening.name || `Job ${index + 1}`;
           this.openingsDropdown.appendChild(option);
           console.log(`➕ Added option: ${option.textContent} (${option.value})`);
         });
@@ -604,14 +606,12 @@ class PopupManager {
         this.openingsDropdown.innerHTML = `<option value="">No job openings available</option>`;
       }
       
-      // Hide retry button on success
       if (this.retryBtn) {
         this.retryBtn.style.display = "none";
       }
     } catch (error) {
       console.error("❌ Failed to fetch openings:", error);
       
-      // Show more detailed error information
       if (error.name === 'AbortError') {
         console.error("⏰ Request timed out after 10 seconds");
         this.openingsDropdown.innerHTML = `<option value="">Request timed out</option>`;
@@ -626,12 +626,10 @@ class PopupManager {
         this.updateStatus("Could not fetch job openings.", "error");
       }
       
-      // Show retry button when there's an error
       if (this.retryBtn) {
         this.retryBtn.style.display = "block";
       }
       
-      // Add a retry button or option
       console.log("🔄 You can try refreshing the popup to retry");
     }
   }
@@ -641,9 +639,7 @@ class PopupManager {
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🚀 Popup DOM loaded, initializing PopupManager");
 
-  // Add a small delay to ensure DOM is fully ready
   setTimeout(() => {
-    // Double-check that all required elements exist
     const requiredElements = [
       "matchBtn",
       "status",
@@ -669,5 +665,5 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (error) {
       console.error("❌ Failed to create PopupManager:", error);
     }
-  }, 100); // 100ms delay
+  }, 100);
 });
