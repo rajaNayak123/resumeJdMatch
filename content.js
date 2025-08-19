@@ -44,9 +44,38 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
 
       const resumeData = this.extractProfileData(doc);
 
+      // Extract header data from the new HTML structure
+      const headerData = this.extractHeaderData(doc);
+
+      // Merge headerData with resumeData
+      if (headerData) {
+        resumeData.header = headerData;
+      }
+
       console.log("✅ Complete resume data extracted:", resumeData);
       return resumeData;
     }
+    // NEW FUNCTION to extract data from the header HTML
+    extractHeaderData(doc = document) {
+      const headerData = {};
+      const get_text = (selector, parent = doc) =>
+        parent.querySelector(selector)?.innerText.trim() || null;
+
+      try {
+        headerData.name = get_text(".TuXA7.ellipsis");
+        headerData.experience = get_text(".QY5cK [title*='y']");
+        headerData.salary = get_text(".QY5cK [title*='Lacs']");
+        headerData.location = get_text(".location");
+        headerData.currentPosition = get_text("._0g20Z .ellipsis[title*='Sr Software engineer']");
+        headerData.highestDegree = get_text("._0g20Z .ellipsis[title*='BCA']");
+        headerData.email = get_text(".rL5xY.ellipsis");
+        return headerData;
+      } catch (error) {
+        console.error("Error extracting header data:", error);
+        return null;
+      }
+    }
+
 
     // Comprehensive Profile Data Extractor
     extractProfileData(doc = document) {
