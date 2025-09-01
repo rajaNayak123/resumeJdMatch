@@ -30,6 +30,52 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
         .filter((text) => text.length > 0);
     }
 
+    // New method for HTML extraction and cleaning
+    extractAndCleanResumeHtml(doc = document) {
+      console.log("🔍 Starting resume HTML extraction and cleaning...");
+
+      let rawHtml = "";
+      const iframe = doc.querySelector('iframe#cv-iframe');
+
+      if (iframe && iframe.contentDocument) {
+          console.log("✅ Extracting from iframe#cv-iframe");
+          rawHtml = iframe.contentDocument.body.innerHTML;
+      } else {
+          console.log("ℹ️ iframe not found, falling back to div.lQ54Q > div.observed");
+          const fallbackDiv = doc.querySelector('.-xOct');
+          if (fallbackDiv) {
+              rawHtml = fallbackDiv.innerHTML;
+          } else {
+              console.log("❌ Could not find resume container.");
+              return "";
+          }
+      }
+
+      // Create a temporary element to parse and manipulate the HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = rawHtml;
+
+      // 1. Remove all <style> blocks
+      tempDiv.querySelectorAll('style').forEach(style => style.remove());
+
+      // 2. Remove all <img> tags
+      tempDiv.querySelectorAll('img').forEach(img => img.remove());
+
+      // 3. Strip inline style attributes
+      tempDiv.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+
+      // The innerHTML of tempDiv is now the cleaned HTML.
+      let cleanedHtml = tempDiv.innerHTML;
+
+      // 4. Remove HTML entities
+      cleanedHtml = cleanedHtml.replace(/&[#A-Za-z0-9]+;/g, "");
+
+
+      console.log("✅ HTML extraction and cleaning complete.");
+      return cleanedHtml;
+    }
+
+
     // Main extraction function
     extractCompleteResumeData(htmlString = null) {
       // If HTML string is provided, create a temporary DOM element
@@ -1799,6 +1845,9 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
       console.log("📄 Page title:", document.title);
 
       try {
+
+        // Extract the cleaned resume HTML
+        const cleanedHtml = this.extractAndCleanResumeHtml(document);
         // Use the new optimized extraction method
         const resumeData = this.extractCompleteResumeData();
 
@@ -1825,6 +1874,7 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
           personalDetails: resumeData.otherDetails?.personalDetails || {},
           desiredJobDetails: resumeData.otherDetails?.desiredJobDetails || {},
           modernData: resumeData, // Include the full comprehensive data
+          cleanedResumeHtml: cleanedHtml
         };
 
         console.log(
@@ -1844,6 +1894,7 @@ if (typeof window.ResumeExtractorLoaded === "undefined") {
           projects: [],
           certifications: [],
           modernData: null,
+          cleanedResumeHtml: ""
         };
       }
 
