@@ -495,8 +495,8 @@ class PopupManager {
 
       const requestBody = {
         opening_id: opening_id,
-        candidate: resumeData.modernData, // FIX: Changed 'resumeData' to 'candidate'
-        cleanedResumeHtml: resumeData.cleanedResumeHtml
+        cvtext: resumeData.modernData + resumeData.cleanedResumeHtml, // FIX: Changed 'resumeData' to 'candidate'
+        
       };
       
       console.log("DEBUG: Request Body Sent to API:", requestBody);
